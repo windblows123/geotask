@@ -24,8 +24,15 @@ type CourierFacade struct {
 }
 
 func (c CourierFacade) MoveCourier(ctx context.Context, direction, zoom int) {
-	//TODO implement me
-	panic("implement me")
+
+	courier, err := c.courierService.GetCourier(ctx)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if err := c.courierService.MoveCourier(*courier, direction, zoom); err != nil {
+		log.Println(err)
+	}
 }
 
 func (c CourierFacade) GetStatus(ctx context.Context) cfm.CourierStatus {

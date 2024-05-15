@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"github.com/kellydunn/golang-geo"
 	"log"
+	"math"
+	"math/rand"
 	"os"
+	"time"
 )
 
 const filename = "/geo/polygons.json"
@@ -34,8 +37,42 @@ func (p Polygon) Allowed() bool {
 }
 
 func (p Polygon) RandomPoint() Point {
-	//TODO implement me
-	panic("implement me")
+	rand.Seed(time.Now().Unix())
+	points := p.polygon.Points()
+	var minLat, minLng, maxLat, maxLng, midLat, midLng, totalLat, totalLng, randomLat, randomLng float64
+	minLat = points[0].Lat()
+	minLng = points[0].Lng()
+	for _, point := range points {
+		if point.Lat() < minLat {
+			minLat = point.Lat()
+		}
+		if point.Lng() < minLng {
+			minLng = point.Lng()
+		}
+		if point.Lat() > maxLat {
+			maxLat = point.Lat()
+		}
+		if point.Lng() > maxLng {
+			maxLng = point.Lng()
+		}
+		totalLat += point.Lat()
+		totalLng += point.Lng()
+	}
+	midLat = totalLat / float64(len(points))
+	midLng = totalLng / float64(len(points))
+	deltaLat := maxLat - minLat
+	deltaLng := maxLng - minLng
+	randomLat = midLat + math.Pow(-1, float64(rand.Intn(2)))*deltaLat
+	randomLng = midLng + math.Pow(-1, float64(rand.Intn(2)))*deltaLng
+	point := Point{
+		Lat: randomLat,
+		Lng: randomLng,
+	}
+	if p.Contains(point) {
+		return point
+	} else {
+		return p.RandomPoint()
+	}
 }
 
 func NewPolygon(geoPoints []Point, allowed bool) *Polygon {

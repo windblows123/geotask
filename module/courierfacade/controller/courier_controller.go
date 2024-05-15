@@ -14,6 +14,7 @@ func NewCourierController(courierService service.CourierFacer) *CourierControlle
 }
 
 func (c *CourierController) GetStatus(ctx *gin.Context) {
+
 	// установить задержку в 50 миллисекунд
 
 	// получить статус курьера из сервиса courierService используя метод GetStatus

@@ -1,7 +1,9 @@
 package order
 
 import (
+	"context"
 	"gitlab.com/iaroslavtsevaleksandr/geotask/module/order/service"
+	"log"
 	"time"
 )
 
@@ -21,6 +23,24 @@ func NewOrderGenerator(orderService service.Orderer) *OrderGenerator {
 }
 
 func (o *OrderGenerator) Run() {
+	ticker := time.NewTicker(orderGenerationInterval)
+	for {
+		select {
+		case <-ticker.C:
+			count, err := o.orderService.GetCount(context.Background())
+			if err != nil {
+				log.Println(err)
+			}
+			if count < maxOrdersCount {
+				if err := o.orderService.GenerateOrder(context.Background()); err != nil {
+					log.Println(err)
+				}
+			} else {
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}
+
 	// запускаем горутину, которая будет генерировать заказы не более чем раз в 10 миллисекунд
 	// не более 200 заказов используя константы orderGenerationInterval и maxOrdersCount
 	// нужно использовать метод orderService.GetCount() для получения количества заказов

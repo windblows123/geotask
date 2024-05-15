@@ -55,9 +55,9 @@ func (c *CourierService) GetCourier(ctx context.Context) (*models.Courier, error
 		}
 		return courier, nil
 	} else {
-		point := c.allowedZone.RandomPoint()
-		courier.Location.Lng = point.Lng
-		courier.Location.Lat = point.Lat
+		randomPoint := c.allowedZone.RandomPoint()
+		courier.Location.Lng = randomPoint.Lng
+		courier.Location.Lat = randomPoint.Lat
 		if err := c.courierStorage.Save(ctx, *courier); err != nil {
 			log.Println("error saving courier in service GetCourier:", err)
 		}
@@ -68,12 +68,42 @@ func (c *CourierService) GetCourier(ctx context.Context) (*models.Courier, error
 
 // MoveCourier : direction - направление движения курьера, zoom - зум карты
 func (c *CourierService) MoveCourier(courier models.Courier, direction, zoom int) error {
-	// точность перемещения зависит от зума карты использовать формулу 0.001 / 2^(zoom - 14)
-	// 14 - это максимальный зум карты
+	// Рассчитываем точность перемещения в зависимости от уровня зума карты
+	stepSize := 0.001 / (1 << uint(14-zoom))
 
-	// далее нужно проверить, что курьер не вышел за границы зоны
-	// если вышел, то нужно переместить его в случайную точку внутри зоны
+	// Вычисляем новые координаты курьера в зависимости от направления и шага перемещения
+	switch direction {
+	case DirectionUp:
+		courier.Location.Lat += stepSize
+	case DirectionDown:
+		courier.Location.Lat -= stepSize
+	case DirectionLeft:
+		courier.Location.Lng -= stepSize
+	case DirectionRight:
+		courier.Location.Lng += stepSize
+	}
 
-	// далее сохранить изменения в хранилище
+	// Проверяем, что курьер остается в пределах разрешенной зоны
+	point := geo.Point{
+		Lat: courier.Location.Lat,
+		Lng: courier.Location.Lng,
+	}
+	if !c.allowedZone.Contains(point) {
+		// Курьер вышел за пределы разрешенной зоны, перемещаем его в случайную точку внутри разрешенной зоны
+		randomPoint := c.allowedZone.RandomPoint()
+		courier.Location.Lng = randomPoint.Lng
+		courier.Location.Lat = randomPoint.Lat
+	}
+
+	// Сохраняем изменения в хранилище
+	err := c.courierStorage.Save(context.Background(), courier)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (c *CourierService) getRandomAllowedPoint() (float64, float64) {
+	return DefaultCourierLat, DefaultCourierLng
 }
